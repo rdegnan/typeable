@@ -1,0 +1,37 @@
+module com.netflix.frege.TypeableProperties where
+
+import Test.QuickCheck
+import com.netflix.frege.Typeable
+import com.netflix.frege.Fingerprint
+
+p_fingerprintString = once $
+  show (fingerprintString "hello") == "5d41402abc4b2a76b9719d911017c592"
+
+p_typeOf1 = property p where
+  p :: Int -> Int -> Bool
+  p a b = typeOf a == typeOf b
+
+p_typeOf2 = property p where
+  p :: (Int, Int) -> (Int, Int) -> Bool
+  p a b = typeOf a == typeOf b
+
+isEqOrNeq :: (Typeable a) => a -> Int -> Bool
+isEqOrNeq a b = case cast a :: Maybe Int of
+  Just a' -> a' == b || a' != b
+  _ -> false
+
+p_cast1 = property p where
+  p :: Int -> Int -> Bool
+  p a b = isEqOrNeq a b
+
+p_cast2 = property p where
+  p :: Char -> Int -> Bool
+  p a b = not (isEqOrNeq a b)
+
+allChecks :: Int -> Bool
+allChecks n = IO.performUnsafe $ foldM (checkAnd n) true checks
+  where
+    checkAnd n false prop = return false
+    checkAnd n true  prop = verboseCheckWithResult stdArgs.{maxSuccess = n} prop
+                                >>= return . isSuccess
+    checks = [ p_fingerprintString, p_typeOf1, p_typeOf2, p_cast1, p_cast2 ]
