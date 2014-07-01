@@ -1,8 +1,10 @@
 module com.netflix.frege.TypeableProperties where
 
 import Test.QuickCheck
+
 import com.netflix.frege.Typeable
 import com.netflix.frege.Fingerprint
+import com.netflix.frege.Dynamic
 
 p_fingerprintString = once $
   show (fingerprintString "hello") == "5d41402abc4b2a76b9719d911017c592"
@@ -28,10 +30,18 @@ p_cast2 = property p where
   p :: Char -> Int -> Bool
   p a b = not (isEqOrNeq a b)
 
+p_dynamic1 = property p where
+  p :: Int -> Bool
+  p a = Just a == (fromDynamic $ toDyn a)
+
+p_dynamic2 = property p where
+  p :: Char -> Bool
+  p a = (Nothing :: Maybe Int) == (fromDynamic $ toDyn a)
+
 allChecks :: Int -> Bool
 allChecks n = IO.performUnsafe $ foldM (checkAnd n) true checks
   where
     checkAnd n false prop = return false
     checkAnd n true  prop = verboseCheckWithResult stdArgs.{maxSuccess = n} prop
                                 >>= return . isSuccess
-    checks = [ p_fingerprintString, p_typeOf1, p_typeOf2, p_cast1, p_cast2 ]
+    checks = [ p_fingerprintString, p_typeOf1, p_typeOf2, p_cast1, p_cast2, p_dynamic1, p_dynamic2 ]
